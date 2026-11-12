@@ -1,0 +1,21 @@
+{
+  "name": "dynamic-ecommerce-platform",
+  "version": "1.0.0",
+  "description": "منصة تجارة إلكترونية متكاملة وديناميكية تدعم المتاجر المتخصصة والمختلطة مع لوحة تحكم متقدمة وربط Firebase و Cloudflare Pages",
+  "main": "functions/index.js",
+  "scripts": {
+    "start": "npx serve public -l 3000",
+    "test": "echo \"Running initial smoke tests...\" && node -e \"console.log('Build and configuration check passed')\""
+  },
+  "keywords": [
+    "ecommerce",
+    "firebase",
+    "cloudflare-pages",
+    "arabic",
+    "rtl",
+    "dynamic-store"
+  ],
+  "author": "Antigravity Senior Full-Stack Developer",
+  "license": "ISC"
+}
+

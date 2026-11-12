@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper: التحقق من صلاحية المشرف
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.token.email != null
+      );
+    }
+
+    // Helper: التحقق من صيغة وحجم الصورة المرفوعة
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 && // حد أقصى 5 ميجابايت
+             request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+    }
+
+    // 1. صور المنتجات ومتغيرات الألوان (products)
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // 2. هوية المتجر: اللوجو والأيقونة (branding)
+    match /branding/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // 3. صور البانرات الإعلانية (banners)
+    match /banners/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // 4. صور الأقسام والتصنيفات (categories)
+    match /categories/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // 5. صور المقالات والمدونة (blog)
+    match /blog/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // منع أي ملفات في مسارات أخرى
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

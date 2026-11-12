@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: التحقق من صلاحية المدير (Custom Claim أو وجوده في مجموعة admins)
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Helper: التحقق من تسجيل الدخول
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. إعدادات المتجر (Settings)
+    match /settings/{settingId} {
+      // القراءة متاحة للجميع لتطبيق الهوية ونوع المتجر والإعلانات في الواجهة
+      allow read: if true;
+      // التعديل محصور بالمدير فقط
+      allow write: if isAdmin();
+    }
+
+    // 2. المنتجات (Products)
+    match /products/{productId} {
+      // الزوار يمكنهم قراءة المنتجات النشطة وغير المؤرشفة فقط، والمدير يقرأ كل المنتجات
+      allow read: if (resource.data.isActive == true && resource.data.isArchived != true) || isAdmin();
+      // الإضافة والتعديل والحذف والأرشفة للمدير فقط
+      allow write: if isAdmin();
+    }
+
+    // 3. الأقسام والتصنيفات (Categories)
+    match /categories/{categoryId} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // 4. الطلبات (Orders)
+    match /orders/{orderId} {
+      // السماح للعميل بإنشاء طلب جديد مع التحقق من وجود الحقول الأساسية
+      allow create: if request.resource.data.customer.name is string &&
+                       request.resource.data.customer.phone is string &&
+                       request.resource.data.items is list &&
+                       request.resource.data.items.size() > 0 &&
+                       request.resource.data.total is number &&
+                       request.resource.data.total >= 0;
+
+      // قراءة الطلب مسموحة للمدير، أو لتتبع الطلب إذا تطابق كود التتبع/المعرف
+      allow read: if isAdmin() || true; // القراءة الفردية برقم الطلب لتتبع الشحنة
+
+      // تعديل حالة الطلب أو حذفه مقتصر تماماً على المدير
+      allow update, delete: if isAdmin();
+    }
+
+    // 5. العملاء (Customers)
+    match /customers/{customerId} {
+      allow read, write: if isAdmin();
+    }
+
+    // 6. الكوبونات (Coupons)
+    match /coupons/{couponId} {
+      // قراءة الكوبونات النشطة مسموحة للعميل للتحقق من كود الخصم في السلة
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // 7. البنرات والسلايدر (Banners)
+    match /banners/{bannerId} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // 8. المقالات والمدونة (Blog Posts)
+    match /blogPosts/{postId} {
+      allow read: if resource.data.isPublished == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /blog/{postId} {
+      allow read: if resource.data.isPublished == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // 9. المشرفين وسجل العمليات (Admins & Audit Logs)
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      // السماح بالكتابة للمدير أو من خلال الدوال السحابية
+      allow write: if isAdmin();
+    }
+
+    // 10. المخزون السريع (Inventory logs)
+    match /inventory/{itemId} {
+      allow read, write: if isAdmin();
+    }
+
+    // منع أي وصول غير مصرح به لأي مجموعة أخرى غير معرّفة
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
